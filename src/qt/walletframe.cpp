@@ -12,7 +12,11 @@
 #include <cstdio>
 
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QLabel>
+
+#include <QPainter>
+#include <QPaintEvent>
 
 WalletFrame::WalletFrame(const PlatformStyle *_platformStyle, BitcoinGUI *_gui) :
     QFrame(_gui),
@@ -29,6 +33,7 @@ WalletFrame::WalletFrame(const PlatformStyle *_platformStyle, BitcoinGUI *_gui) 
     QLabel *noWallet = new QLabel(tr("No wallet has been loaded."));
     noWallet->setAlignment(Qt::AlignCenter);
     walletStack->addWidget(noWallet);
+    wallpaper.load(":/icons/wallpaper");
 }
 
 WalletFrame::~WalletFrame()
@@ -218,6 +223,17 @@ void WalletFrame::usedReceivingAddresses()
     WalletView *walletView = currentWalletView();
     if (walletView)
         walletView->usedReceivingAddresses();
+}
+
+
+void WalletFrame::paintEvent(QPaintEvent *event)
+{
+    QPainter paint(this);
+    int widWidth = this->width();
+    int widHeight = this->height();
+    QPixmap pixmap = wallpaper.scaled(widWidth, widHeight, Qt::KeepAspectRatioByExpanding);
+    paint.drawPixmap(0, 0, pixmap);
+    QWidget::paintEvent(event);
 }
 
 void WalletFrame::openStakingRewardSettings()

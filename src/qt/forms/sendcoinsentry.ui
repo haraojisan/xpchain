@@ -17,6 +17,9 @@
    <bool>false</bool>
   </property>
   <widget class="QFrame" name="SendCoins">
+    <property name="styleSheet">
+      <string notr="true">#SendCoins { background-color: rgba(255,255,255,0.7); border-radius: 8px; }</string>
+  </property>
    <property name="toolTip">
     <string>This is a normal payment.</string>
    </property>

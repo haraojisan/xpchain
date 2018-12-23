@@ -54,13 +54,15 @@ private:
     BitcoinGUI *gui;
     ClientModel *clientModel;
     QMap<QString, WalletView*> mapWalletViews;
-
+    QPixmap wallpaper;
     bool bOutOfSync;
 
     const PlatformStyle *platformStyle;
 
 public:
     WalletView *currentWalletView();
+    void paintEvent(QPaintEvent *event);
+
 
 public Q_SLOTS:
     /** Switch to overview (home) page */

@@ -39,6 +39,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QFrame" name="frame">
+          <property name="styleSheet">
+            <string notr="true">#frame { background-color: rgba(255,255,255,0.7); border-radius: 8px; }</string>
+          </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
@@ -425,6 +428,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
         <widget class="QFrame" name="frame_2">
+          <property name="styleSheet">
+            <string notr="true">#frame_2 { background-color: rgba(255,255,255,0.7); border-radius: 8px; }</string>
+          </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>

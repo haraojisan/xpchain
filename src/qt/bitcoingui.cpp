@@ -77,7 +77,8 @@ BitcoinGUI::BitcoinGUI(interfaces::Node& node, const PlatformStyle *_platformSty
         // Restore failed (perhaps missing setting), center the window
         move(QApplication::desktop()->availableGeometry().center() - frameGeometry().center());
     }
-
+    setMinimumHeight(700);
+    setMinimumWidth(1200);
     QString windowTitle = tr(PACKAGE_NAME) + " - ";
 #ifdef ENABLE_WALLET
     enableWallet = WalletModel::isWalletEnabled();
@@ -262,7 +263,7 @@ void BitcoinGUI::createActions()
     historyAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_4));
     tabGroup->addAction(historyAction);
 
-    mintingAction = new QAction(platformStyle->SingleColorIcon(":/icons/tx_mined"), tr("&Minting"), this);
+    mintingAction = new QAction(platformStyle->SingleColorIcon(":/icons/minting"), tr("&Minting"), this);
     mintingAction->setStatusTip(tr("Show the status of minting"));
     mintingAction->setToolTip(mintingAction->statusTip());
     mintingAction->setCheckable(true);
@@ -423,14 +424,20 @@ void BitcoinGUI::createToolBars()
     {
         QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
         appToolBar = toolbar;
+        toolbar->setOrientation(Qt::Vertical);
+        toolbar->setIconSize(QSize(80, 80));
         toolbar->setContextMenuPolicy(Qt::PreventContextMenu);
         toolbar->setMovable(false);
-        toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        toolbar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         toolbar->addAction(overviewAction);
         toolbar->addAction(sendCoinsAction);
         toolbar->addAction(receiveCoinsAction);
         toolbar->addAction(historyAction);
         toolbar->addAction(mintingAction);
+        addToolBar(Qt::LeftToolBarArea, toolbar);
+        toolbar->setStyleSheet("QToolBar{background-color: #001A43;}"
+                        "QToolButton{color:white;}"
+                        "QToolTip { color: black; }");
         overviewAction->setChecked(true);
 
 #ifdef ENABLE_WALLET

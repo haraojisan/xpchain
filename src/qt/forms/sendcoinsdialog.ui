@@ -19,6 +19,9 @@
    </property>
    <item>
     <widget class="QFrame" name="frameCoinControl">
+      <property name="styleSheet">
+        <string notr="true">#frameCoinControl { background-color: rgba(255,255,255,0.7); border-radius: 8px; }</string>
+      </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -579,10 +582,16 @@
    </item>
    <item>
     <widget class="QScrollArea" name="scrollArea">
+      <property name="styleSheet">
+        <string notr="true">#scrollArea { background-color: rgba(255,255,255,0); }</string>
+      </property>
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="styleSheet">
+         <string notr="true">#scrollAreaWidgetContents { background-color: rgba(255,255,255,0); }</string>
+       </property>
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -630,6 +639,9 @@
    </item>
    <item>
     <widget class="QFrame" name="frameFee">
+      <property name="styleSheet">
+        <string notr="true">#frameFee { background-color: rgba(255,255,255,0.7); border-radius: 8px; }</string>
+      </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>

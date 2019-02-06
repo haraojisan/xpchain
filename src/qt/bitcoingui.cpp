@@ -435,9 +435,15 @@ void BitcoinGUI::createToolBars()
         toolbar->addAction(historyAction);
         toolbar->addAction(mintingAction);
         addToolBar(Qt::LeftToolBarArea, toolbar);
+#if defined(Q_OS_MAC)
         toolbar->setStyleSheet("QToolBar{background-color: #001A43;}"
                         "QToolButton{color:black;}"
                         "QToolTip { color: black; }");
+#else
+        toolbar->setStyleSheet("QToolBar{background-color: #001A43;}"
+                        "QToolButton{color:white;}"
+                        "QToolTip { color: black; }");
+#endif
         overviewAction->setChecked(true);
 
 #ifdef ENABLE_WALLET

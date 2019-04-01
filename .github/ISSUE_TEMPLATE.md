@@ -1,8 +1,12 @@
-<!-- This issue tracker is only for technical issues related to Bitcoin Core.
+<!-- This issue tracker is only for technical issues related to XPChain Core.
 
-General bitcoin questions and/or support requests are best directed to the Bitcoin StackExchange at https://bitcoin.stackexchange.com.
+General XPChain questions and/or support requests are best directed to
+the XPChain's topic on Bitcoin Forum at https://bitcointalk.org/index.php?topic=4022431
+or the Global Discord server (https://discord.gg/DbfBWZY) (require Discord client)
 
-For reporting security issues, please read instructions at https://bitcoincore.org/en/contact/.
+You can also ask a quick question of the official Twitter account (@XPChain_Global).
+
+For reporting security issues, contact the team at contact(at)xpchain.io
 
 If the node is "stuck" during sync or giving "block checksum mismatch" errors, please ensure your hardware is stable by running memtest and observe CPU temperature with a load-test tool such as linpack before creating an issue! -->
 
@@ -13,7 +17,7 @@ If the node is "stuck" during sync or giving "block checksum mismatch" errors, p
 
 <!--- How reliably can you reproduce the issue, what are the steps to do so? -->
 
-<!-- What version of Bitcoin Core are you using, where did you get it (website, self-compiled, etc)? -->
+<!-- What version of XPChain Core are you using, where did you get it (website, self-compiled, etc)? -->
 
 <!-- What type of machine are you observing the error on (OS/CPU and disk type)? -->
 

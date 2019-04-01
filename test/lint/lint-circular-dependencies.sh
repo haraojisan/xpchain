@@ -47,6 +47,7 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "kernel -> validation -> kernel"
     "init -> miner -> kernel -> init"
     "keystore -> script/sign -> policy/policy -> validation -> outputtype -> keystore"
+    "policy/stake -> validation -> policy/stake"
 )
 
 EXIT_CODE=0

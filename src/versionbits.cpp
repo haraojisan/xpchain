@@ -17,6 +17,14 @@ const struct VBDeploymentInfo VersionBitsDeploymentInfo[Consensus::MAX_VERSION_B
     {
         /*.name =*/ "segwit",
         /*.gbt_force =*/ true,
+    },
+    {
+        /*.name =*/ "block signature addition",
+        /*.gbt_force =*/ true,
+    },
+    {
+        "check_dup_txin",
+        true,
     }
 };
 

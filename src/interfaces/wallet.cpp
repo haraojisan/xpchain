@@ -211,6 +211,11 @@ public:
         LOCK2(cs_main, m_wallet.cs_wallet);
         return m_wallet.IsLockedCoin(output.hash, output.n);
     }
+    bool isSpent(const uint256& hash, unsigned int n) override
+    {
+        LOCK2(cs_main, m_wallet.cs_wallet);
+        return m_wallet.IsSpent(hash, n);
+    }
     void listLockedCoins(std::vector<COutPoint>& outputs) override
     {
         LOCK2(cs_main, m_wallet.cs_wallet);

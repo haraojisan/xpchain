@@ -8,9 +8,6 @@
 /* Milliseconds between model updates */
 static const int MODEL_UPDATE_DELAY = 250;
 
-/* Milliseconds between mintingtablemodel updates */
-static const int MODEL_MINTING_UPDATE_DELAY = 1000;
-
 /* AskPassphraseDialog -- Maximum passphrase length */
 static const int MAX_PASSPHRASE_SIZE = 1024;
 

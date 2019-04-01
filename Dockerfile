@@ -35,7 +35,7 @@ COPY . /usr/src/xpchain
 WORKDIR /usr/src/xpchain
 RUN \
   ./autogen.sh && \
-  ./configure --without-gui && \
+  ./configure --without-gui --disable-tests --disable-bench && \
   make -j$(nproc) && \
   make install && \
   make clean
@@ -82,7 +82,6 @@ RUN \
 
 # Copy build xpchaind (and other tools)
 COPY --from=build \
-  /usr/local/bin/bench_bitcoin  /usr/local/bin/test_bitcoin \
   /usr/local/bin/xpchain-cli /usr/local/bin/xpchain-tx /usr/local/bin/xpchaind \
   /usr/local/bin/
 

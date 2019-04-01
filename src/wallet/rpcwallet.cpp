@@ -1127,7 +1127,7 @@ static UniValue sendmany(const JSONRPCRequest& request)
         help_text = "sendmany \"\" {\"address\":amount,...} ( minconf \"comment\" [\"address\",...] replaceable conf_target \"estimate_mode\")\n"
             "\nSend multiple times. Amounts are double-precision floating point numbers.\n"
             "Note that the \"fromaccount\" argument has been removed in V0.17. To use this RPC with a \"fromaccount\" argument, restart\n"
-            "bitcoind with -deprecatedrpc=accounts\n"
+            "xpchaind with -deprecatedrpc=accounts\n"
             + HelpRequiringPassphrase(pwallet) + "\n"
             "\nArguments:\n"
             "1. \"dummy\"               (string, required) Must be set to \"\" for backwards compatibility.\n"
@@ -1907,7 +1907,7 @@ UniValue listtransactions(const JSONRPCRequest& request)
         help_text = "listtransactions (dummy count skip include_watchonly)\n"
             "\nReturns up to 'count' most recent transactions skipping the first 'from' transactions for account 'account'.\n"
             "Note that the \"account\" argument and \"otheraccount\" return value have been removed in V0.17. To use this RPC with an \"account\" argument, restart\n"
-            "bitcoind with -deprecatedrpc=accounts\n"
+            "xpchaind with -deprecatedrpc=accounts\n"
             "\nArguments:\n"
             "1. \"dummy\"    (string, optional) If set, should be \"*\" for backwards compatibility.\n"
             "2. count          (numeric, optional, default=10) The number of transactions to return\n"
@@ -4773,7 +4773,7 @@ static UniValue listmintings(const JSONRPCRequest& request)
             "Optionally filter to only include txouts paid to specified addresses.\n"
             "\nArguments:\n"
             "1. period           (numeric, optional, default=10) period in minute of calculate probability and reward\n"
-            "2. minage           (numeric, optional, default=1) The minimum age to filter\n"
+            "2. minage           (numeric, optional, default=0) The minimum age to filter\n"
             "3. maxage           (numeric, optional, default=9999999) The maximum age to filter\n"
             "4. \"addresses\"      (string, optional) A json array of xpchain addresses to filter\n"
             "    [\n"
@@ -4825,7 +4825,7 @@ static UniValue listmintings(const JSONRPCRequest& request)
         nCalculatePeriod = request.params[0].get_int();
     }
 
-    int nMinAge = 1;
+    int nMinAge = 0;
     if (!request.params[1].isNull()) {
         RPCTypeCheckArgument(request.params[1], UniValue::VNUM);
         nMinAge = request.params[1].get_int();

@@ -281,6 +281,7 @@ void WalletView::decryptForMinting(bool status)
 
         if(walletModel->getEncryptionStatus() != WalletModel::Unlocked){
             fWalletUnlockMintOnly = false;
+            updateEncryptionStatus();
             return;
          }
     }

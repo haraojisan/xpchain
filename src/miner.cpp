@@ -122,6 +122,34 @@ static std::vector<std::pair<CTxDestination, int>> GetRewardPct(const CWallet& w
     }
     return result;
 }
+static bool SignBlock(CBlock* pblock, const CWallet& wallet)
+{
+    assert(pblock->vtx.size() >= 2);
+    CMutableTransaction coinbaseTx(*pblock->vtx[0]);
+    std::vector<CPubKey> vPubKeys;
+    LogPrintf("get pubkey\n");
+    if (!GetPubKeysFromCoinStakeTx(pblock->vtx[1], vPubKeys)) {
+        LogPrintf("could not get pubkey from TX\n");
+        return false;
+    }
+    std::vector<unsigned char> sig;
+    for (CPubKey pubkey : vPubKeys) {
+        CKey privkey;
+        if (wallet.GetKey(pubkey.GetID(), privkey)) {
+            LogPrintf("sign block\n");
+            if (privkey.Sign(pblock->GetBlockHeader().GetHash(), sig)) {
+                //ScriptSig = Height Signature
+                coinbaseTx.vin[0].scriptSig = coinbaseTx.vin[0].scriptSig << sig;
+                pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+                pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+                LogPrintf("sign hash = %s signature = %s\n", pblock->GetBlockHeader().GetHash().ToString().c_str(), HexStr(sig.begin(), sig.end()));
+                return true;
+            }
+        }
+    }
+    LogPrintf("could not get pubkey from wallet\n");
+    return false;
+}
 #endif
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
 {
@@ -310,7 +338,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             coinbaseTx.vout[0].nValue = nBlockReward;
         }
     }
-    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+    coinbaseTx.vin[0].scriptSig = CScript() << nHeight;
+    if (!fPoSHeight) {
+        coinbaseTx.vin[0].scriptSig = coinbaseTx.vin[0].scriptSig << OP_0;
+    }
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
     pblocktemplate->vTxFees[0] = -nFees;
@@ -325,6 +356,16 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
+    if (fPoSHeight) {
+#ifdef ENABLE_WALLET
+        pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+        if (!SignBlock(pblock, *pwallet)) {
+            return nullptr;
+        }
+#else
+        return nullptr;
+#endif
+    }
 
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
@@ -649,6 +690,11 @@ void BitcoinMinter(const std::shared_ptr<CWallet>& wallet)
                 continue;
             }
 
+            if(IsInitialBlockDownload()) {
+                MilliSleep(1000);
+                continue;
+            }
+
             //
             // Create new block
             //
@@ -701,7 +747,6 @@ void BitcoinMinter(const std::shared_ptr<CWallet>& wallet)
                     else
                     {
                         CBlock *pblock = &pblocktemplate->block;
-                        pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
                         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
                         if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr))
                         {

@@ -61,8 +61,28 @@ struct TxLessThan
     {
         return a.hash < b.hash || (a.hash == b.hash && a.n < b.n);
     }
+    bool operator()(const KernelRecord &a, const std::pair<uint256, uint32_t> &b) const
+    {
+        return a.hash < b.first || (a.hash == b.first && a.n < b.second);
+    }
+    bool operator()(const std::pair<uint256, uint32_t> &a, const KernelRecord &b) const
+    {
+        return a.first < b.hash || (a.first == b.hash && a.second < b.n);
+    }
+    bool operator()(const KernelRecord &a, const uint256 &b) const
+    {
+        return a.hash < b;
+    }
+    bool operator()(const uint256 &a, const KernelRecord &b) const
+    {
+        return a < b.hash;
+    }
 };
 
+bool compareWtx(const interfaces::WalletTx &a, const interfaces::WalletTx &b)
+{
+  return a.time < b.time;
+}
 // Private implementation
 class MintingTablePriv
 {
@@ -79,65 +99,130 @@ public:
      * this is sorted by sha256.
      */
     QList<KernelRecord> cachedWallet;
+    QList<std::pair<uint256, int>> procQueue;
 
     /* Query entire wallet anew from core.
      */
-    void refreshWallet(interfaces::Wallet& wallet)
+    void refreshWallet()
     {
         qDebug() << "MintingTablePriv::refreshWallet";
 
-        // Make mask
-        QList<bool> mask;
-        for(int i = 0; i < cachedWallet.size(); i++)
+        int dequeue = std::min(procQueue.size(), 100); // limit 100
+        while(dequeue-- > 0)
         {
-            mask.append(false);
+            // dequeue one event
+            std::pair<uint256, uint32_t> pair = procQueue[0];
+            procEvent(pair.first, pair.second);
+            procQueue.removeAt(0);
+        }
+    }
+
+    void procEvent(uint256 hash, int status)
+    {
+        // Find bounds of this transaction in model
+        QList<KernelRecord>::iterator lower = qLowerBound(
+            cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
+        QList<KernelRecord>::iterator upper = qUpperBound(
+            cachedWallet.begin(), cachedWallet.end(), hash, TxLessThan());
+        int lowerIndex = (lower - cachedWallet.begin());
+        int upperIndex = (upper - cachedWallet.begin());
+
+        interfaces::WalletTx wtx = parent->walletModel->wallet().getWalletTx(hash);
+        interfaces::WalletTxStatus tx_status;
+        int num_blocks;
+        int64_t block_time;
+        bool success = parent->walletModel->wallet().tryGetTxStatus(hash, tx_status, num_blocks, block_time);
+
+        if(!success){
+            // not found status
+            return;
         }
 
-        // Update and add records
-        for (const auto& coins : wallet.listCoins())
+        if(status == CT_NEW)
         {
-            for (const auto& outpair : coins.second)
+            // requeue if the transaction is coinbase and immature
+            if(tx_status.is_coinbase && tx_status.blocks_to_maturity > 0)
             {
-                const COutPoint& output = std::get<0>(outpair);
-                const interfaces::WalletTxOut& out = std::get<1>(outpair);
-                std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(output, out);
-                if(KernelRecord::showTransaction())
+                procQueue.append(std::make_pair(hash, status));
+                return;
+            }
+
+            // spent
+            const std::vector<CTxIn> ins = wtx.tx->vin;
+            const std::vector<isminetype> isMine = wtx.txin_is_mine;
+            for(uint32_t i = 0; i < ins.size(); i++)
+            {
+                if(isMine[i] == isminetype::ISMINE_SPENDABLE)
                 {
+                    uint256 phash = ins[i].prevout.hash;
+                    uint32_t n = ins[i].prevout.n;
 
-                    for(const KernelRecord& kr : txList)
-                    {
-                        QList<KernelRecord>::iterator lower = qLowerBound(
-                            cachedWallet.begin(), cachedWallet.end(), kr, TxLessThan());
-                        QList<KernelRecord>::iterator upper = qUpperBound(
-                            cachedWallet.begin(), cachedWallet.end(), kr, TxLessThan());
-                        int lowerIndex = (lower - cachedWallet.begin());
-                        bool inModel = (lower != upper);
-
-                        if(inModel)
-                        {
-                            cachedWallet.replace(lowerIndex, kr);
-                            mask.replace(lowerIndex, true);
-                        }
-                        else
-                        {
-                            parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex);
-                            cachedWallet.insert(lowerIndex, kr);
-                            mask.insert(lowerIndex, true);
-                            parent->endInsertRows();
+                    for(int i = 0; i < cachedWallet.size(); i++){
+                        if(cachedWallet[i].hash == phash && cachedWallet[i].n == n){
+                            parent->beginRemoveRows(QModelIndex(), i, i);
+                            cachedWallet.removeAt(i);
+                            parent->endRemoveRows();
+                            break;
                         }
                     }
                 }
             }
-        }
-        // Delete old records
-        for(int i = 0; i < mask.size(); i++)
-        {
-            if(mask.at(i) == false)
+
+            // append
+            int offsetLower = 0;
+            for(const KernelRecord& kr : KernelRecord::decomposeOutput(wtx))
             {
-                parent->beginRemoveRows(QModelIndex(), i, i);
-                cachedWallet.removeAt(i);
-                parent->endRemoveRows();
+                if(parent->walletModel->wallet().isSpent(kr.hash, kr.n)) // spent
+                {
+                    continue;
+                }
+
+                parent->beginInsertRows(QModelIndex(), lowerIndex + offsetLower, lowerIndex + offsetLower);
+                cachedWallet.insert(lowerIndex + offsetLower, kr);
+                parent->endInsertRows();
+                offsetLower++;
             }
+        }
+        else if(status == CT_UPDATED)
+        {
+            // nothing to do
+        }
+        else if(status == CT_DELETED)
+        {
+            // this status is not thrown
+            parent->beginRemoveRows(QModelIndex(), lowerIndex, upperIndex - 1);
+            for(int i = lowerIndex; i < upperIndex; i++)
+            {
+                cachedWallet.removeAt(i);
+            }
+            parent->endRemoveRows();
+
+            for(uint32_t n = 0; n <= wtx.tx->vin.size(); n++)
+            {
+                if(wtx.txin_is_mine[n] == isminetype::ISMINE_SPENDABLE)
+                {
+                    interfaces::WalletTx prev_wtx = parent->walletModel->wallet().getWalletTx(wtx.tx->vin[n].prevout.hash);
+
+                    std::vector<KernelRecord> krs = KernelRecord::decomposeOutput(prev_wtx);
+                    const KernelRecord& kr = krs[wtx.tx->vin[n].prevout.n];
+
+                    QList<KernelRecord>::iterator prev_lower = qLowerBound(
+                        cachedWallet.begin(), cachedWallet.end(), kr, TxLessThan());
+                    QList<KernelRecord>::iterator prev_upper = qUpperBound(
+                        cachedWallet.begin(), cachedWallet.end(), kr, TxLessThan());
+                    int prev_lowerIndex = (prev_lower - cachedWallet.begin());
+
+                    if(prev_lower == prev_upper) // not in model
+                    {
+                        parent->beginInsertRows(QModelIndex(), prev_lowerIndex, prev_lowerIndex);
+                        cachedWallet.insert(prev_lowerIndex, kr);
+                        parent->endInsertRows();
+                    }
+                }
+            }
+        }
+        else{
+            qDebug() << "MintingTablePriv::procEvent : Unexpected status";
         }
     }
 
@@ -184,17 +269,27 @@ MintingTableModel::MintingTableModel(const PlatformStyle *_platformStyle, Wallet
 {
     columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("CoinDay") << tr("MintProbability") << tr("MintReward");
 
-    priv->refreshWallet(walletModel->wallet());
+    // Initialize records
+    std::vector<interfaces::WalletTx> wtxs = walletModel->wallet().getWalletTxs();
+    std::sort(wtxs.begin(), wtxs.end(), compareWtx);
+    for (const auto& wtx : wtxs)
+    {
+        priv->procEvent(wtx.tx->GetHash(), CT_NEW);
+    }
+
+    subscribeToCoreSignals();
+    priv->refreshWallet();
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateAge()));
-    timer->start(MODEL_MINTING_UPDATE_DELAY);
+    timer->start(MODEL_UPDATE_DELAY);
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 }
 
 MintingTableModel::~MintingTableModel()
 {
+    unsubscribeFromCoreSignals();
     delete priv;
 }
 
@@ -203,8 +298,10 @@ void MintingTableModel::updateTransaction(const QString &hash, int status, bool 
     uint256 updated;
     updated.SetHex(hash.toStdString());
 
-    priv->refreshWallet(walletModel->wallet());
-    mintingProxyModel->invalidate(); // Force deletion of empty rows
+    // CT_NEW -> add
+    // !showTransaction -> delete
+    // CT_UPDATED -> nothing to do
+    priv->procQueue.append(std::make_pair(updated, showTransaction ? status : CT_DELETED));
 }
 
 void MintingTableModel::updateAge()
@@ -213,7 +310,7 @@ void MintingTableModel::updateAge()
     Q_EMIT dataChanged(index(0, CoinDay), index(priv->size()-1, CoinDay));
     Q_EMIT dataChanged(index(0, MintProbability), index(priv->size()-1, MintProbability));
     Q_EMIT dataChanged(index(0, MintReward), index(priv->size()-1, MintReward));
-    priv->refreshWallet(walletModel->wallet());
+    priv->refreshWallet();
 }
 
 void MintingTableModel::setMintingProxyModel(MintingFilterProxy *mintingProxy)
@@ -448,3 +545,58 @@ void MintingTableModel::updateDisplayUnit()
     // emit dataChanged to update Balance column with the current unit
     Q_EMIT dataChanged(index(0, Balance), index(priv->size()-1, Balance));
 }
+
+// queue notifications to show a non freezing progress dialog e.g. for rescan
+struct TransactionNotification
+{
+public:
+    TransactionNotification() {}
+    TransactionNotification(uint256 _hash, ChangeType _status, bool _showTransaction):
+        hash(_hash), status(_status), showTransaction(_showTransaction) {}
+
+    void invoke(QObject *mtm)
+    {
+        QString strHash = QString::fromStdString(hash.GetHex());
+        qDebug() << "NotifyTransactionChanged: " + strHash + " status= " + QString::number(status);
+        QMetaObject::invokeMethod(mtm, "updateTransaction", Qt::QueuedConnection,
+                                  Q_ARG(QString, strHash),
+                                  Q_ARG(int, status),
+                                  Q_ARG(bool, showTransaction));
+    }
+private:
+    uint256 hash;
+    ChangeType status;
+    bool showTransaction;
+};
+
+static bool fQueueNotifications = false;
+static std::vector< TransactionNotification > vQueueNotifications;
+
+static void NotifyTransactionChanged(MintingTableModel *mtm, const uint256 &hash, ChangeType status)
+{
+    // Find transaction in wallet
+    // Determine whether to show transaction or not (determine this here so that no relocking is needed in GUI thread)
+    bool showTransaction = KernelRecord::showTransaction();
+
+    TransactionNotification notification(hash, status, showTransaction);
+
+    if (fQueueNotifications)
+    {
+        vQueueNotifications.push_back(notification);
+        return;
+    }
+    notification.invoke(mtm);
+}
+
+void MintingTableModel::subscribeToCoreSignals()
+{
+    // Connect signals to wallet
+    m_handler_transaction_changed = walletModel->wallet().handleTransactionChanged(boost::bind(NotifyTransactionChanged, this, _1, _2));
+}
+
+void MintingTableModel::unsubscribeFromCoreSignals()
+{
+    // Disconnect signals from wallet
+    m_handler_transaction_changed->disconnect();
+}
+

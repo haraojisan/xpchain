@@ -128,6 +128,9 @@ public:
     //! Return whether coin is locked.
     virtual bool isLockedCoin(const COutPoint& output) = 0;
 
+    //! Return whether coin is Spent.
+    virtual bool isSpent(const uint256& hash, unsigned int n) = 0;
+
     //! List locked coins.
     virtual void listLockedCoins(std::vector<COutPoint>& outputs) = 0;
 

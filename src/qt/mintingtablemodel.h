@@ -47,6 +47,7 @@ public:
 
 private:
     WalletModel *walletModel;
+    std::unique_ptr<interfaces::Handler> m_handler_transaction_changed;
     QStringList columns;
     int mintingInterval;
     MintingTablePriv *priv;
@@ -63,6 +64,9 @@ private:
     QString formatTxBalance(const KernelRecord *wtx) const;
     QString formatTxCoinDay(const KernelRecord *wtx) const;
     QString formatTxPoSReward(KernelRecord *wtx) const;
+
+    void subscribeToCoreSignals();
+    void unsubscribeFromCoreSignals();
 
 public Q_SLOTS:
     void updateTransaction(const QString &hash, int status, bool showTransaction);

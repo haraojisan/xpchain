@@ -397,6 +397,8 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CDiskBlockPos& pos, const CMessageHeader::MessageStartChars& message_start);
 bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex, const CMessageHeader::MessageStartChars& message_start);
 
+bool GetPubKeysFromCoinStakeTx(CTransactionRef txCoinStake, std::vector<CPubKey>& vPubKeys);
+bool CheckBlockSignature(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams);
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
@@ -505,6 +507,6 @@ inline bool IsBlockPruned(const CBlockIndex* pblockindex)
 
 bool IsPoSHeight(int n, const Consensus::Params& params);
 uint256 GetRewardHash(const std::vector<std::pair<CScript, CAmount>>& vReward,CTransactionRef txCoinStake, uint32_t nTime);
-bool VerifyCoinBaseTx(const CBlock& block);
+bool VerifyCoinBaseTx(const CBlock& block, CValidationState& state);
 
 #endif // BITCOIN_VALIDATION_H
